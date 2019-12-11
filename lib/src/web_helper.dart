@@ -52,7 +52,7 @@ class WebHelper {
       {Map<String, String> authHeaders}) async {
     var cacheObject = await _store.retrieveCacheData(url);
     if (cacheObject == null) {
-      cacheObject = new CacheObject(url);
+      cacheObject = new CacheObject(url.split("?")[0]);
     }
 
     var headers = new Map<String, String>();
