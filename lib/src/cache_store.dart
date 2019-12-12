@@ -49,14 +49,14 @@ class CacheStore {
   }
 
   Future<FileInfo> getFile(String url) async {
-    String _url = _stripParams(url);
-    var cacheObject = await retrieveCacheData(_url);
+    url = url.split('?')[0];
+    var cacheObject = await retrieveCacheData(url);
     if (cacheObject == null || cacheObject.relativePath == null) {
       return null;
     }
     var path = p.join(await filePath, cacheObject.relativePath);
     return new FileInfo(
-        File(path), FileSource.Cache, cacheObject.validTill, _url);
+        File(path), FileSource.Cache, cacheObject.validTill, url);
   }
 
   putFile(CacheObject cacheObject) async {
@@ -65,12 +65,11 @@ class CacheStore {
   }
 
   Future<CacheObject> retrieveCacheData(String url) {
-    String _url = _stripParams(url);
-    print(_url);
-    if (_memCache.containsKey(_url)) {
-      return Future.value(_memCache[_url]);
+    url = url.split('?')[0];
+    if (_memCache.containsKey(url)) {
+      return Future.value(_memCache[url]);
     }
-    if (!_futureCache.containsKey(_url)) {
+    if (!_futureCache.containsKey(url)) {
       var completer = new Completer<CacheObject>();
       _getCacheDataFromDatabase(url).then((cacheObject) async {
         if (cacheObject != null && !await _fileExists(cacheObject)) {
@@ -80,25 +79,25 @@ class CacheStore {
         }
         completer.complete(cacheObject);
 
-        _memCache[_url] = cacheObject;
-        _futureCache[_url] = null;
+        _memCache[url] = cacheObject;
+        _futureCache[url] = null;
       });
 
-      _futureCache[_url] = completer.future;
+      _futureCache[url] = completer.future;
     }
-    return _futureCache[_url];
+    return _futureCache[url];
   }
 
   FileInfo getFileFromMemory(String url) {
-    String _url = _stripParams(url);
-    if (_memCache[_url] == null || _filePath == null) {
+    url = url.split('?')[0];
+    if (_memCache[url] == null || _filePath == null) {
       return null;
     }
-    var cacheObject = _memCache[_url];
+    var cacheObject = _memCache[url];
 
     var path = p.join(_filePath, cacheObject.relativePath);
     return new FileInfo(
-        File(path), FileSource.Cache, cacheObject.validTill, _url);
+        File(path), FileSource.Cache, cacheObject.validTill, url);
   }
 
   Future<bool> _fileExists(CacheObject cacheObject) async {
@@ -109,9 +108,9 @@ class CacheStore {
   }
 
   Future<CacheObject> _getCacheDataFromDatabase(String url) async {
-    String _url = _stripParams(url);
+    url = url.split('?')[0];
     var provider = await _cacheObjectProvider;
-    var data = await provider.get(_url);
+    var data = await provider.get(url);
     if (await _fileExists(data)) {
       _updateCacheDataInDatabase(data);
     }
@@ -130,7 +129,6 @@ class CacheStore {
   }
 
   Future<dynamic> _updateCacheDataInDatabase(CacheObject cacheObject) async {
-    //print(cacheObject.url);
     var provider = await _cacheObjectProvider;
     var data = await provider.updateOrInsert(cacheObject);
     return data;
@@ -183,13 +181,6 @@ class CacheStore {
     if (await file.exists()) {
       file.delete();
     }
-  }
-
-  String _stripParams(String url) {
-    String splitURL = url.split("?")[0];
-    //print(splitURL);
-    return splitURL;
-    return url;
   }
 
   Future<void> dispose() async {
